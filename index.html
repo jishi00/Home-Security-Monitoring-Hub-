@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Security Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #eff6ff; color: #000000; }
+        
+        /* Navigation Buttons */
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            background-color: #bfdbfe; /* Light blue accent for inactive */
+            color: #1e3a8a; /* Dark blue text */
+        }
+        .nav-button.active {
+            background-color: #2563eb; /* Blue 600 */
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.5);
+        }
+        .nav-button:hover:not(.active) {
+            background-color: #93c5fd; /* Blue 300 */
+        }
+
+        /* Views */
+        .view-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Circle Graph CSS */
+        .circle-chart { width: 200px; height: 200px; }
+        .percentage-text { font-size: 2.25rem; font-weight: 800; fill: #000; text-anchor: middle; dominant-baseline: middle; }
+
+        /* Trigger Animations */
+        .trigger-standard { border-color: #3b82f6 !important; background-color: #eff6ff !important; animation: pulse-blue 2s infinite; }
+        .trigger-warning { border-color: #f59e0b !important; background-color: #fffbeb !important; animation: pulse-orange 1.5s infinite; }
+        .trigger-critical { border-color: #ef4444 !important; background-color: #fee2e2 !important; animation: pulse-red 1s infinite; }
+
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+        @keyframes pulse-orange { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        /* Critical Risk Flashing Animation */
+        @keyframes flash-alert {
+            0%, 100% { background-color: #ffffff; border-color: #dbeafe; } /* white bg, blue-100 border */
+            50% { background-color: #fef2f2; border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); } /* red-50 bg, red-500 border */
+        }
+        .risk-section-flash {
+            animation: flash-alert 1s infinite ease-in-out;
+        }
+
+        /* Notification Ticker */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background-color: #1e3a8a;
+            color: white;
+            padding: 8px 0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .ticker-item {
+            display: inline-block;
+            padding: 0 2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Auth Screen Styles */
+        .auth-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .auth-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            max-width: 400px;
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- AUTHENTICATION PORTAL -->
+    <div id="auth-portal" class="auth-container">
+        <div class="auth-box">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-600">
+                     <!-- SVG Logo Replacement -->
+                     <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="m9 12 2 2 4-4"/>
+                     </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Welcome to Hub</h2>
+                <p class="text-gray-500 text-sm mt-1">Sign in to access your Security Hub</p>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="login-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="login-pass" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    Sign In
+                </button>
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-600">Don't have an account? <a href="#" onclick="toggleAuth('signup')" class="text-blue-600 font-bold hover:underline">Sign Up</a></p>
+                </div>
+            </form>
+
+            <!-- SIGNUP FORM (Hidden by default) -->
+            <form id="signup-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="signup-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
+                    <input type="password" id="signup-pass" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                </div>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition shadow-lg">
+                    Create Account
+                </button>
+                <div class="text-center mt-4">
+                    <p class="text-sm text-gray-600">Already have an account? <a href="#" onclick="toggleAuth('login')" class="text-blue-600 font-bold hover:underline">Sign In</a></p>
+                </div>
+            </form>
+
+            <div id="auth-message" class="mt-4 text-center text-sm font-medium text-red-500 h-5"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTENT (Hidden until login) -->
+    <div id="main-app" class="hidden p-4 md:p-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-md border border-blue-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 flex items-center justify-center text-blue-600">
+                     <!-- SVG Logo Replacement -->
+                     <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="m9 12 2 2 4-4"/>
+                     </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-black tracking-tight">Smart Home <span class="text-blue-600">Security Hub</span></h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Connection Status Indicator -->
+                <div id="connection-status" class="flex items-center space-x-2 text-sm font-semibold text-gray-500">
+                    <span class="w-3 h-3 rounded-full bg-gray-400"></span>
+                    <span class="hidden md:inline">Connecting...</span>
+                </div>
+
+                <!-- Profile Info (Added) -->
+                <div class="flex items-center space-x-2 pl-4 border-l border-gray-200">
+                    <div id="profile-avatar" class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs uppercase shadow-sm border border-blue-200">
+                        U
+                    </div>
+                    <span id="profile-name" class="text-sm font-bold text-gray-700 hidden sm:block">
+                        User
+                    </span>
+                    <!-- Hidden span for User Info ref -->
+                     <span id="user-info" class="hidden"></span>
+                </div>
+
+                <!-- Logout Button -->
+                <!-- Added ID "logout-btn" to fix reference error -->
+                <button id="logout-btn" class="text-sm text-red-600 font-bold hover:underline">Logout</button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="flex flex-wrap justify-center space-x-2 md:space-x-4 mb-8">
+            <button class="nav-button active" onclick="switchView('home')">Dashboard</button>
+            <button class="nav-button" onclick="switchView('simulator')">Live Monitor</button>
+            <button class="nav-button" onclick="switchView('assessment')">Risk Assessment</button>
+            <button class="nav-button" onclick="switchView('shop')">Shop</button>
+            <button class="nav-button" onclick="switchView('info')">About</button>
+        </nav>
+
+        <main class="w-full max-w-6xl mx-auto space-y-8">
+            <!-- VIEW 1: HOME DASHBOARD -->
+            <div id="view-home" class="view-content active">
+                <!-- Notification Bar (Activity Log Ticker) -->
+                <div class="ticker-wrap shadow-lg" id="notification-bar">
+                    <div class="ticker-item flex items-center justify-center space-x-2">
+                        <span id="ticker-dot" class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></span>
+                        <span id="ticker-text">Live System Feed: System Secure. No recent critical events.</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Welcome / Status Card -->
+                    <div class="col-span-1 md:col-span-2 lg:col-span-2 bg-white rounded-2xl p-8 shadow-lg border border-blue-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                        <div class="relative z-10">
+                            <h2 class="text-3xl font-extrabold text-black mb-2">System Overview</h2>
+                            <p class="text-gray-600 mb-6">Real-time surveillance and status summary.</p>
+                            <!-- Active Triggers List -->
+                            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                <h3 class="font-bold text-blue-800 mb-2 flex items-center">
+                                    <span class="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                                    Active Triggers (Live)
+                                </h3>
+                                <ul id="home-active-triggers" class="space-y-2">
+                                    <li class="text-sm text-gray-500 italic">Scanning system...</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Latest Risk Score Card -->
+                    <div id="risk-card-container" class="bg-white rounded-2xl p-6 shadow-lg border border-blue-100 flex flex-col items-center justify-center text-center transition-all duration-300">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Real-Time Risk Score</h3>
+                        <!-- Mini Circle Graph -->
+                        <div class="relative w-32 h-32">
+                            <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+                                <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" />
+                                <path id="mini-risk-circle" class="text-gray-300" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" style="transition: all 0.5s ease;" />
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="mini-risk-score" class="text-xl font-bold text-gray-400">--%</span>
+                            </div>
+                        </div>
+                        <p id="mini-risk-label" class="text-sm font-medium mt-2 text-gray-500">Calculating...</p>
+                        <p class="text-xs text-gray-400 mt-1">*Reflects live Standard vs Critical alerts</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: SIMULATOR -->
+            <div id="view-simulator" class="view-content">
+                <div class="bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-100 flex flex-col justify-between items-center bg-blue-50">
+                        <div class="w-full mb-4">
+                            <h2 class="text-2xl font-bold text-black">Precision Live Simulator</h2>
+                            <p class="text-sm text-blue-700">Trigger specific events to test system response.</p>
+                        </div>
+                        
+                        <!-- New Precision Controls -->
+                        <div class="w-full bg-white p-4 rounded-xl border border-blue-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-1 w-full">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Where (Location)</label>
+                                <select id="sim-sensor-select" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 text-black font-medium">
+                                    <option value="" disabled selected>Choose</option>
+                                    <option>Loading sensors...</option>
+                                </select>
+                            </div>
+                            <div class="flex-1 w-full">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">What (Event Type)</label>
+                                <select id="sim-event-select" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 text-black font-medium">
+                                    <option value="" disabled selected>Choose</option>
+                                    <option value="Motion Detected">Motion Detected (Standard)</option>
+                                    <option value="Door Opened">Door Opened (Standard)</option>
+                                    <option value="Tamper Alert">Tamper Alert (Warning)</option>
+                                    <option value="Window Broken">Window Broken (Critical)</option>
+                                    <option value="Forced Entry">Forced Entry (Critical)</option>
+                                </select>
+                            </div>
+                            <button onclick="triggerSelectedSensor()" class="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold shadow-md transition-transform active:scale-95 flex items-center justify-center">
+                                <span>⚡ Trigger Event</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3">
+                        <!-- Sensor Grid -->
+                        <div class="lg:col-span-2 p-6 bg-gray-50">
+                            <div id="sensor-grid" class="grid grid-cols-2 md:grid-cols-2 gap-4">
+                                <!-- Sensors injected by JS -->
+                                <div class="animate-pulse bg-gray-200 h-32 rounded-xl"></div>
+                                <div class="animate-pulse bg-gray-200 h-32 rounded-xl"></div>
+                            </div>
+                        </div>
+
+                        <!-- Event Log -->
+                        <div class="lg:col-span-1 bg-white border-l border-gray-100 p-0">
+                            <div class="p-4 bg-gray-900 text-white font-mono text-sm uppercase tracking-wider">System Log</div>
+                            <div id="event-log" class="h-96 overflow-y-auto p-4 space-y-3 font-mono text-xs bg-gray-900 text-green-400">
+                                <!-- Logs injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: RISK ASSESSMENT -->
+            <div id="view-assessment" class="view-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Form Section -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-8 shadow-lg border border-blue-100">
+                        <h2 class="text-2xl font-bold text-black mb-6">Security Audit</h2>
+                        <form id="assessment-form" class="space-y-6">
+                            <div id="questions-container" class="space-y-6"></div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:-translate-y-1">
+                                Calculate & Save to Database
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Result Section -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-8 bg-white rounded-2xl p-8 shadow-lg border border-blue-100 flex flex-col items-center text-center">
+                            <h3 class="text-xl font-bold text-gray-800 mb-6">Base Safety Score</h3>
+                            <div class="relative w-48 h-48 mb-6">
+                                <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+                                    <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="2" />
+                                    <path id="main-risk-circle" class="text-blue-600 circle-progress" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="main-risk-score" class="percentage-text">0%</span>
+                                </div>
+                            </div>
+                            <div id="risk-result-text" class="bg-gray-50 rounded-lg p-4 w-full">
+                                <p class="font-bold text-gray-400">Pending...</p>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-4 italic">Note: This is your base infrastructure score. The live dashboard score may vary based on active alerts.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 4: SHOP -->
+            <div id="view-shop" class="view-content">
+                <h2 class="text-3xl font-bold text-black mb-6">Recommended Upgrades</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Product 1: Outdoor Camera -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400 relative">
+                            <img src="https://placehold.co/400x300/1e3a8a/FFFFFF?text=Smart+Camera" class="w-full h-full object-cover">
+                            <span class="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Best Seller</span>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">Smart Outdoor Camera</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">Essential for perimeter monitoring with 24/7 recording and night vision.</p>
+                            <a href="https://www.amazon.com/s?k=smart+outdoor+security+camera" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                    <!-- Product 2: Motion Sensor Kit -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <img src="https://placehold.co/400x300/166534/FFFFFF?text=Motion+Sensor" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">Motion Sensor Kit</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">Instant alerts for movement in hallways or rooms. Pet-immune technology.</p>
+                            <a href="https://www.amazon.com/s?k=smart+motion+sensor" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                    <!-- Product 3: Smart Lock -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <img src="https://placehold.co/400x300/ea580c/FFFFFF?text=Smart+Lock" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">Biometric Smart Lock</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">Keyless entry with fingerprint, pin code, and app remote locking capabilities.</p>
+                            <a href="https://www.amazon.com/s?k=smart+door+lock" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                    <!-- Product 4: Video Doorbell -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <img src="https://placehold.co/400x300/6366f1/FFFFFF?text=Video+Doorbell" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">HD Video Doorbell</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">See who is at your door from anywhere. Two-way audio communication.</p>
+                            <a href="https://www.amazon.com/s?k=smart+video+doorbell" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                    <!-- Product 5: Glass Break Sensor -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <img src="https://placehold.co/400x300/ef4444/FFFFFF?text=Glass+Break" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">Glass Break Sensor</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">Detects the sound of breaking glass windows. Critical for ground floor security.</p>
+                            <a href="https://www.amazon.com/s?k=glass+break+sensor" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                    <!-- Product 6: Indoor Camera -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-blue-100 overflow-hidden hover:shadow-xl transition flex flex-col">
+                        <div class="h-48 bg-gray-200 flex items-center justify-center text-gray-400">
+                            <img src="https://placehold.co/400x300/8b5cf6/FFFFFF?text=Indoor+Cam" class="w-full h-full object-cover">
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <h3 class="font-bold text-xl text-black">Indoor Pan/Tilt Camera</h3>
+                            <p class="text-sm text-gray-600 mt-2 mb-4 flex-grow">360-degree coverage for living rooms and baby monitoring.</p>
+                            <a href="https://www.amazon.com/s?k=indoor+security+camera" target="_blank" class="block w-full text-center bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 mt-auto">Buy on Amazon</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VIEW 5: INFO (About) -->
+            <div id="view-info" class="view-content">
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-blue-100">
+                    <div class="max-w-3xl mx-auto">
+                        <h2 class="text-3xl font-extrabold text-black mb-2 text-center">About</h2>
+                        <p class="text-gray-500 text-center mb-10">Understanding the critical role of security systems in modern living.</p>
+                        
+                        <div class="space-y-8">
+                            <div class="flex gap-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">🛡️</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-blue-800 mb-2">1. Protection of Family & Valuables</h3>
+                                    <p class="text-gray-600 leading-relaxed">The primary goal is to protect your loved ones from intruders. In the event of a break-in, alarms can scare off burglars, while cameras provide crucial evidence to authorities.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-2xl">👁️</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-orange-700 mb-2">2. Visual Deterrence</h3>
+                                    <p class="text-gray-600 leading-relaxed">Visible security measures like cameras, yard signs, and smart locks act as a powerful psychological deterrent. Criminals often bypass homes that appear difficult to breach.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl">📱</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-green-700 mb-2">3. Remote Monitoring</h3>
+                                    <p class="text-gray-600 leading-relaxed">Modern systems allow you to monitor your home from anywhere via smartphone. Whether you're at work or on vacation, you can check live feeds and receive instant alerts.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-2xl">💰</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-purple-700 mb-2">4. Lower Insurance Premiums</h3>
+                                    <p class="text-gray-600 leading-relaxed">Many insurance providers offer discounts of up to 20% for homes with monitored security systems, as they are statistically less likely to file theft claims.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <div class="flex-shrink-0 w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-2xl">❤️</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-pink-700 mb-2">5. Peace of Mind</h3>
+                                    <p class="text-gray-600 leading-relaxed">Perhaps the most valuable benefit is the confidence that comes with knowing your sanctuary is secure. This reduces stress and allows you to rest easier at night.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FIREBASE AND APP LOGIC -->
+    <script type="module">
+        // ----------------------------------------------------
+        // 1. FIREBASE CONFIGURATION & IMPORTS
+        // ----------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+
+             const firebaseConfig = {
+
+  apiKey: "AIzaSyDRSeK-KQC29QL9LOJSat_UIE0iOfIPYm0",
+
+  authDomain: "homesecuritysimulator.firebaseapp.com",
+
+  projectId: "homesecuritysimulator",
+
+  storageBucket: "homesecuritysimulator.firebasestorage.app",
+
+  messagingSenderId: "317647992746",
+
+  appId: "1:317647992746:web:6776259841830a20879dd3",
+
+  measurementId: "G-69GDG228R9"
+
+};
+
+        // Initialize Firebase
+        let app, auth;
+        let isFirebaseActive = false;
+        let currentUser = localStorage.getItem('sh_username'); // Fix: Define currentUser globally
+
+        try {
+            // Check if the user is still using the placeholder
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                isFirebaseActive = true;
+                
+                // Auth Listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        showApp(user);
+                    } else {
+                        showAuth();
+                    }
+                });
+            } else {
+                console.warn("Firebase not configured. Using Demo Mode.");
+                const warning = document.createElement('div');
+                warning.className = "fixed top-0 left-0 w-full bg-yellow-600 text-white text-center text-xs p-1 font-bold z-50";
+                warning.innerText = "Demo Mode: Add your Firebase API Key in the code (Line ~436) to enable real authentication.";
+                document.body.appendChild(warning);
+            }
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+        }
+
+        // ----------------------------------------------------
+        // 2. AUTHENTICATION UI LOGIC
+        // ----------------------------------------------------
+        window.toggleAuth = (mode) => {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const msg = document.getElementById('auth-message');
+            msg.innerText = "";
+
+            if (mode === 'signup') {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+            } else {
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            }
+        };
+
+        const loginForm = document.getElementById('login-form');
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            handleAuthAction(signInWithEmailAndPassword, email, pass, "Signing in...");
+        });
+
+        const signupForm = document.getElementById('signup-form');
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const pass = document.getElementById('signup-pass').value;
+            handleAuthAction(createUserWithEmailAndPassword, email, pass, "Creating account...");
+        });
+
+        function handleAuthAction(actionFunc, email, pass, loadingMsg) {
+            const msg = document.getElementById('auth-message');
+            msg.innerText = loadingMsg;
+            msg.className = "mt-4 text-center text-sm font-medium text-blue-500 min-h-[20px]";
+
+            if (isFirebaseActive) {
+                actionFunc(auth, email, pass)
+                    .then(() => {
+                        // onAuthStateChanged handles UI switch
+                        msg.innerText = "Success!";
+                    })
+                    .catch((error) => {
+                        msg.innerText = "Error: " + error.message;
+                        msg.className = "mt-4 text-center text-sm font-medium text-red-500 min-h-[20px]";
+                    });
+            } else {
+                // Demo Mode
+                setTimeout(() => {
+                    showApp({ email: email });
+                }, 1000);
+            }
+        }
+
+        // Fix: Removed incorrect onclick handler from HTML and added listener correctly
+        document.getElementById('logout-btn').addEventListener('click', () => {
+             if (isFirebaseActive) {
+                 signOut(auth).then(() => {
+                     localStorage.removeItem('sh_username');
+                     currentUser = null;
+                     location.reload();
+                 });
+             } else {
+                 localStorage.removeItem('sh_username');
+                 currentUser = null;
+                 location.reload();
+             }
+        });
+
+        function showApp(user) {
+            document.getElementById('auth-portal').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            const email = user.email || user.email || (typeof user === 'string' ? user : (user.user ? user.user.email : 'Demo User'));
+
+            // Update User Info
+            const userInfoEl = document.getElementById('user-info');
+            if(userInfoEl) userInfoEl.innerText = email;
+
+            const profileNameEl = document.getElementById('profile-name');
+            if(profileNameEl) profileNameEl.innerText = email;
+
+            const profileAvatarEl = document.getElementById('profile-avatar');
+            if(profileAvatarEl && email) profileAvatarEl.innerText = email.charAt(0).toUpperCase();
+            
+            currentUser = email;
+            localStorage.setItem('sh_username', email);
+            
+            // Start polling
+            startPolling();
+        }
+
+        function showAuth() {
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('auth-portal').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+            document.getElementById('signup-form').reset();
+        }
+
+        // --- POLLING & DATA FETCHING ---
+        let pollIntervals = [];
+        const API_URL = "http://127.0.0.1:8000"; // Assuming local backend or placeholder
+        let USE_DEMO_MODE = true; // Default to demo
+        let baseAssessmentScore = 100;
+        let activePenalty = 0;
+
+        function startPolling() {
+            // Clear existing intervals to prevent duplicates
+            pollIntervals.forEach(clearInterval);
+            pollIntervals = [];
+
+            // Initial fetch
+            fetchSensorData(); 
+            fetchLatestAssessment();
+            
+            // Set intervals
+            pollIntervals.push(setInterval(fetchSensorData, 2000));
+            pollIntervals.push(setInterval(fetchLatestEvents, 2000));
+        }
+
+        // --- BACKEND CONNECTION ---
+        async function checkBackend() {
+            const statusEl = document.getElementById('connection-status');
+            try {
+                await fetch(`${API_URL}/`);
+                statusEl.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500"></span><span class="text-green-700 hidden md:inline">Connected</span>`;
+                USE_DEMO_MODE = false;
+            } catch (e) {
+                console.warn("Backend not found, switching to Demo Mode.");
+                statusEl.innerHTML = `<span class="w-3 h-3 rounded-full bg-orange-400"></span><span class="text-orange-600 hidden md:inline">Demo Mode</span>`;
+                USE_DEMO_MODE = true;
+                initDemoData();
+            }
+        }
+
+        // ----------------------------------------------------
+        // 3. APP LOGIC (SIMULATOR, TABS, RISK)
+        // ----------------------------------------------------
+        
+        // Tab Switching
+        window.switchView = (viewId) => {
+            document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('view-' + viewId).classList.add('active');
+            // Find button with onclick matching viewId and add active class
+            const btns = document.querySelectorAll('.nav-button');
+            btns.forEach(btn => {
+                if(btn.getAttribute('onclick').includes(viewId)) btn.classList.add('active');
+            });
+        };
+
+        // --- RISK ASSESSMENT DATA ---
+        const questions = [
+            "Are all entry doors equipped with deadbolt locks?",
+            "Do you have a working security alarm system?",
+            "Are windows accessible from the ground locked?",
+            "Do you have motion sensor lights outdoors?",
+            "Is there a clear view of the street from your home?",
+            "Do you have a plan for fire emergencies?",
+            "Are spare keys kept in a secure location (not under mat)?",
+            "Do you have security cameras installed?",
+            "Is your Wi-Fi network password protected?",
+            "Do you simulate presence when away (timers on lights)?"
+        ];
+       
+        // --- DEMO DATA ---
+        let demoSensors = [
+            { id: "1", name: "Front Door", type: "door", is_triggered: 0 },
+            { id: "2", name: "Kitchen Window", type: "window", is_triggered: 0 },
+            { id: "3", name: "Backyard Cam", type: "camera", is_triggered: 0 },
+            { id: "4", name: "Hallway Motion", type: "motion", is_triggered: 0 }
+        ];
+
+        function initDemoData() {
+            populateLocationSelect(demoSensors);
+        }
+
+          // --- FETCH SENSORS ---
+        async function fetchSensorData() {
+            let sensors = [];
+            if (USE_DEMO_MODE) {
+                sensors = demoSensors;
+            } else {
+                try {
+                    const res = await fetch(`${API_URL}/sensors`);
+                    sensors = await res.json();
+                } catch(e) { return; }
+            }
+
+            const select = document.getElementById('sim-sensor-select');
+            // Only populate if empty or just "Loading..."
+            if (select.children.length <= 1) {
+                populateLocationSelect(sensors);
+            }
+
+            renderSimulator(sensors);
+            updateHomeTriggers(sensors);
+            updateTicker(sensors);
+            calculateRealTimeRisk(sensors);
+        }
+
+        function populateLocationSelect(sensors) {
+            const select = document.getElementById('sim-sensor-select');
+            // Keep the initial "Choose" option and clear loading text if present
+            select.innerHTML = '<option value="" disabled selected>Choose</option>'; 
+            sensors.forEach(s => {
+                select.innerHTML += `<option value="${s.id}">${s.name} (${s.type})</option>`;
+            });
+        }
+
+        // --- REAL TIME RISK CALCULATION ---
+        function calculateRealTimeRisk(sensors) {
+            let penalty = 0;
+            let hasCriticalOrWarning = false;
+
+            sensors.forEach(s => {
+                if (s.is_triggered > 0) {
+                    if (s.is_triggered >= 2) { 
+                        hasCriticalOrWarning = true;
+                        penalty += 25; 
+                    } else { 
+                        penalty += 5; 
+                    }
+                }
+            });
+
+            activePenalty = penalty;
+            let currentRealTimeScore = Math.max(0, baseAssessmentScore - activePenalty);
+            updateMiniRiskUI(currentRealTimeScore);
+        }
+
+        function renderSimulator(sensors) {
+            const grid = document.getElementById('sensor-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+
+            sensors.forEach(s => {
+                let statusClass = 'bg-white border-gray-200';
+                let iconColor = 'text-blue-600';
+                let statusText = 'Secure';
+                let statusTextColor = 'text-green-600';
+                let resetButton = '';
+
+                if (s.is_triggered > 0) {
+                    // Fix: Ensure resetSensor is globally accessible
+                    resetButton = `<button onclick="window.resetSensor('${s.id}')" class="mt-2 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">Reset</button>`;
+                    
+                    if (s.is_triggered === 1) { 
+                        statusClass = 'trigger-standard';
+                        iconColor = 'text-blue-600';
+                        statusText = 'ACTIVITY DETECTED';
+                        statusTextColor = 'text-blue-600 font-bold';
+                    } else if (s.is_triggered === 2) { 
+                        statusClass = 'trigger-warning';
+                        iconColor = 'text-orange-500';
+                        statusText = 'WARNING';
+                        statusTextColor = 'text-orange-600 font-bold';
+                    } else if (s.is_triggered === 3) { 
+                        statusClass = 'trigger-critical';
+                        iconColor = 'text-red-600';
+                        statusText = 'CRITICAL ALERT';
+                        statusTextColor = 'text-red-600 font-bold';
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div class="${statusClass} rounded-xl p-4 shadow-sm border transition-all duration-300 flex flex-col justify-between h-32">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-gray-800">${s.name}</span>
+                            <span class="${iconColor} text-2xl">
+                                ${getIcon(s.type)}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <span class="text-xs uppercase text-gray-400 font-semibold tracking-wider block">${s.type}</span>
+                                ${resetButton}
+                            </div>
+                            <span class="${statusTextColor} text-sm">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateHomeTriggers(sensors) {
+            const list = document.getElementById('home-active-triggers');
+            const active = sensors.filter(s => s.is_triggered > 0);
+            
+            if (active.length === 0) {
+                list.innerHTML = `<li class="text-green-600 flex items-center"><span class="mr-2">✓</span> All Systems Secure</li>`;
+            } else {
+                list.innerHTML = active.map(s => {
+                    let color = 'text-blue-600';
+                    let icon = 'ℹ';
+                    if (s.is_triggered === 2) { color = 'text-orange-600'; icon = '⚠'; }
+                    if (s.is_triggered === 3) { color = 'text-red-600'; icon = '🚨'; }
+                    return `<li class="${color} font-bold flex items-center">
+                        <span class="mr-2">${icon}</span> ${s.name}
+                    </li>`;
+                }).join('');
+            }
+        }
+        
+        function updateTicker(sensors) {
+            const tickerText = document.getElementById('ticker-text');
+            const tickerDot = document.getElementById('ticker-dot');
+            const active = sensors.filter(s => s.is_triggered > 0);
+
+            if (active.length === 0) {
+                tickerText.innerHTML = '<span class="text-white">Live System Feed: System Secure. No active threats detected.</span>';
+                tickerDot.className = "w-3 h-3 bg-green-400 rounded-full animate-pulse";
+            } else {
+                const isCritical = active.some(s => s.is_triggered === 3);
+                const isWarning = active.some(s => s.is_triggered === 2);
+                
+                let msgColor = 'text-blue-200';
+                let dotColor = 'bg-blue-400';
+                let prefix = 'INFO';
+                
+                if (isCritical) { msgColor = 'text-red-300'; dotColor = 'bg-red-500'; prefix = 'CRITICAL'; }
+                else if (isWarning) { msgColor = 'text-orange-300'; dotColor = 'bg-orange-400'; prefix = 'WARNING'; }
+                
+                const names = active.map(s => s.name).join(', ');
+                tickerText.innerHTML = `<span class="${msgColor} font-bold">${prefix}: Activity detected at ${names}</span>`;
+                tickerDot.className = `w-3 h-3 ${dotColor} rounded-full animate-pulse`;
+            }
+        }
+
+        async function fetchLatestEvents() {
+            if (USE_DEMO_MODE) return;
+            try {
+                const res = await fetch(`${API_URL}/events?limit=1`);
+                const events = await res.json();
+                if (events && events.length > 0) {
+                    const ev = events[0];
+                    addLog(`${ev.level.toUpperCase()}: ${ev.source} - ${JSON.stringify(ev.payload || {})}`, ev.level);
+                }
+            } catch(e) {}
+        }
+
+        // --- ACTION HANDLERS ---
+        // Make global so onclick works
+        window.triggerSelectedSensor = async function() {
+            const sensorId = document.getElementById('sim-sensor-select').value;
+            const eventType = document.getElementById('sim-event-select').value;
+
+            if (!sensorId || !eventType) {
+                alert("Please select both a location and an event type.");
+                return;
+            }
+
+            if (USE_DEMO_MODE) {
+                const s = demoSensors.find(x => x.id === sensorId);
+                if (s) {
+                    let lvl = 1;
+                    if (eventType.includes("Break") || eventType.includes("Force")) lvl = 3;
+                    else if (eventType.includes("Tamper")) lvl = 2;
+                    s.is_triggered = lvl;
+                    addLog(`[DEMO] ${eventType} at ${s.name}`, lvl === 3 ? 'critical' : 'info');
+                    fetchSensorData();
+                }
+            } else {
+                try {
+                    await fetch(`${API_URL}/sensors/${sensorId}/trigger?event_text=${encodeURIComponent(eventType)}`, { method: 'POST' });
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        window.resetSensor = async function(id) {
+            if (USE_DEMO_MODE) {
+                const s = demoSensors.find(x => x.id === id);
+                if (s) s.is_triggered = 0;
+                fetchSensorData();
+            } else {
+                await fetch(`${API_URL}/sensors/${id}/reset`, { method: 'POST' });
+            }
+        }
+
+        document.getElementById('assessment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            let score = 0;
+            let details = {};
+            for (let [key, val] of formData.entries()) {
+                score += parseInt(val);
+                details[key] = val;
+            }
+
+            if (!USE_DEMO_MODE) {
+                try {
+                    await fetch(`${API_URL}/assessment`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ score: score, details: details })
+                    });
+                } catch(err) { console.error("Save failed", err); }
+            } else {
+                localStorage.setItem('latest_score', score);
+            }
+            baseAssessmentScore = score;
+            updateMainRiskUI(score);
+            alert(`Assessment Complete! Base Score: ${score}%`);
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        });
+
+        async function fetchLatestAssessment() {
+            let score = 0;
+            if (!USE_DEMO_MODE) {
+                try {
+                    const res = await fetch(`${API_URL}/assessment/latest`);
+                    const data = await res.json();
+                    if (data) score = data.score;
+                    else score = 100;
+                } catch(e) { score = 100; }
+            } else {
+                score = parseInt(localStorage.getItem('latest_score') || 100);
+            }
+            baseAssessmentScore = score;
+            updateMainRiskUI(score);
+        }
+
+        function updateMainRiskUI(score) {
+            const circle = document.getElementById('main-risk-circle');
+            const text = document.getElementById('main-risk-score');
+            const resultText = document.getElementById('risk-result-text');
+            updateCircle(circle, text, score);
+            if (score >= 80) {
+                resultText.innerHTML = `<span class="text-green-600 font-bold">Excellent Base Security!</span>`;
+            } else {
+                resultText.innerHTML = `<span class="text-red-600 font-bold">Infrastructure Risks Detected!</span>`;
+            }
+        }
+
+        function updateMiniRiskUI(score) {
+            const circle = document.getElementById('mini-risk-circle');
+            const text = document.getElementById('mini-risk-score');
+            const label = document.getElementById('mini-risk-label');
+            const card = document.getElementById('risk-card-container'); // Get the card element
+
+            updateCircle(circle, text, score);
+
+            // Flashing Alert Logic for Score < 60%
+            if (score < 60) {
+                card.classList.add('risk-section-flash'); // Add flashing animation
+                label.innerText = "CRITICAL RISK";
+                label.className = "text-sm font-bold mt-2 text-red-600 animate-pulse";
+            } else {
+                card.classList.remove('risk-section-flash'); // Remove flashing animation
+                
+                if (score >= 80) {
+                    label.innerText = "System Secure";
+                    label.className = "text-sm font-medium mt-2 text-green-600";
+                } else if (score >= 50) {
+                    label.innerText = "Caution";
+                    label.className = "text-sm font-medium mt-2 text-yellow-600";
+                }
+            }
+        }
+
+        function updateCircle(circleEl, textEl, score) {
+            let colorClass = score >= 80 ? 'text-green-500' : (score >= 50 ? 'text-yellow-500' : 'text-red-500');
+            let strokeColor = score >= 80 ? '#22c55e' : (score >= 50 ? '#eab308' : '#ef4444');
+            circleEl.setAttribute('stroke-dasharray', `${score}, 100`);
+            circleEl.style.color = strokeColor;
+            textEl.innerText = `${score}%`;
+            textEl.className = `percentage-text ${colorClass}`;
+        }
+
+        function getIcon(type) {
+            if (type.includes('door')) return '🚪';
+            if (type.includes('window')) return '🪟';
+            if (type.includes('motion')) return '🏃';
+            if (type.includes('camera')) return '📷';
+            return '🔔';
+        }
+
+        let lastLog = '';
+        function addLog(msg, level) {
+            if (msg === lastLog) return;
+            lastLog = msg;
+            const log = document.getElementById('event-log');
+            if(!log) return;
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<span class="opacity-50">[${time}]</span> ${msg}`;
+            if (level === 'warn' || level === 'critical') div.style.color = '#f87171'; 
+            log.prepend(div);
+        }
+
+        // Initialize
+        checkBackend();
+        // Render empty questions immediately so tab isn't blank
+        const qContainer = document.getElementById('questions-container');
+        if(qContainer && qContainer.innerHTML === "") {
+             questions.forEach((q, idx) => {
+                qContainer.innerHTML += `
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <p class="font-semibold text-gray-800 mb-3">${idx + 1}. ${q}</p>
+                        <div class="flex space-x-6">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="q${idx}" value="10" class="accent-blue-600 w-5 h-5" required>
+                                <span>Yes</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="q${idx}" value="0" class="accent-blue-600 w-5 h-5" required>
+                                <span>No</span>
+                            </label>
+                        </div>
+                    </div>`;
+            });
+        }
+    </script>
+</body>
+</html>
